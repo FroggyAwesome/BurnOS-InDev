@@ -1,0 +1,9 @@
+vim
+make
+gcc
+clang
+grub
+xorriso
+mtools
+qemu-full
+gdb

@@ -1,0 +1,7 @@
+To Do:
+Installer // I don't know if I'll be able to do this.
+Raw FS disk (RO Only) + Read X(disk number) X(sector) to print text, ej $ read 0 5 \n Hello World // same up
+BurnLang Interpreter port to module // in progress, builtin on shell
+Doom ASCII port with some colors
+'pacman' (package manager) command to enable apps/modules + pacman -e(enable x package) -d(disable x package) -i(print info x package), ej $ pacman -e games, $ pacman -d games, $ pacman -i games \n games v1.0
+-+ New Directories: pkgs/{modules,programs}
