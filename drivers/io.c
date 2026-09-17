@@ -25,14 +25,3 @@ io_wait(void)
 {
 	outb(0x80, 0);
 }
-
-void
-sleep_ms(unsigned int milliseconds)
-{
-	for (unsigned int i = 0; i < milliseconds; i++) {
-		for (unsigned int j = 0; j < 1000; j++) {
-			io_wait();
-			__asm__ volatile("pause");
-		}
-	}
-}

@@ -25,9 +25,12 @@ CHECK_WARNINGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wundef -Wwrite-strin
 CCHECKFLAGS = $(CHECK_BASE) $(CHECK_WARNINGS) $(CFILES)
 CFORMATFLAGS = -i $(CFILES) $(HFILES) $(CONFIGFILES)
 EMU = qemu-system-i386
-EMUFLAGS = -enable-kvm -cpu host -smp 1 -m $(MEM) -net none -nodefaults -machine pc -bios $(FW) -boot d -vga std
-OBJS = objs/arch/x86/boot.o $(patsubst %.c,objs/%.o,$(CFILES))
-.PHONY: all debug build format check iso run run-debug gdb clean-objs clean-bin clean-grub clean-os distclean
+EMULOGFILE = qemu.log
+EMULOG = -d int,cpu_reset -D $(EMULOGFILE)
+EMUCPU = -cpu pentium -smp 1
+EMUFLAGS = $(EMUCPU) -m $(MEM) -net none -nodefaults -machine pc -bios $(FW) -boot d -vga std
+OBJS = objs/arch/x86/boot.o objs/arch/x86/isr.o $(patsubst %.c,objs/%.o,$(CFILES))
+.PHONY: all debug build format check iso run run-debug gdb clean-log clean-objs clean-bin clean-grub clean-os distclean
 all: debug
 bin/kernel.bin: $(OBJS)
 	@mkdir -p bin/
@@ -37,6 +40,9 @@ debug: bin/kernel.bin
 build: FLAGS = $(CFLAGS)
 build: check format distclean bin/kernel.bin
 objs/arch/x86/boot.o: arch/x86/boot.s
+	@mkdir -p objs/arch/x86
+	$(AS) $(ASFLAGS) $< -o $@
+objs/arch/x86/isr.o: arch/x86/isr.s
 	@mkdir -p objs/arch/x86
 	$(AS) $(ASFLAGS) $< -o $@
 objs/kernel/%.o: kernel/%.c
@@ -65,14 +71,16 @@ iso:
 run:
 	$(EMU) $(EMUFLAGS) -cdrom out/$(TARGET).iso
 run-debug:
-	$(EMU) $(EMUFLAGS) -gdb $(GDBADDR) -S -cdrom out/$(TARGET).iso
+	$(EMU) $(EMUFLAGS) -gdb $(GDBADDR) -S $(EMULOG) -cdrom out/$(TARGET).iso
+clean-log:
+	rm -f $(EMULOGFILE)
 clean-objs:
 	rm -rf objs/
 clean-bin:
 	rm -rf bin/
 clean-grub:
-	rm -rf iso/boot/*.bin
+	rm -f iso/boot/*.bin
 clean-os:
 	rm -rf out/
-distclean: clean-objs clean-bin clean-grub clean-os
+distclean: clean-log clean-objs clean-bin clean-grub clean-os
 -include $(OBJS:.o=.d)

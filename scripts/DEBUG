@@ -1,0 +1,2 @@
+#! /bin/bash
+qemu-system-i386 -cpu pentium -smp 1 -m 4M -net none -nodefaults -machine pc -bios BIOS -boot d -vga std -d int,cpu_reset -D qemu.log

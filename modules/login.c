@@ -1,8 +1,8 @@
 #include "login.h"
 #include "general.h"
-#include "io.h"
 #include "keyboard.h"
 #include "os.h"
+#include "timer.h"
 #include "vga.h"
 
 static int

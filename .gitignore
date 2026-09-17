@@ -2,3 +2,4 @@ objs/
 bin/
 iso/boot/*.bin
 out/
+qemu.log

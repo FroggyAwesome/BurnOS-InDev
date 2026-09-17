@@ -1,13 +1,13 @@
 #include "shell.h"
 #include "drivers.h"
 #include "files.h"
-#include "vfs.h"
 #include "games.h"
 #include "general.h"
 #include "kernel.h"
 #include "keyboard.h"
 #include "os.h"
 #include "system.h"
+#include "vfs.h"
 #include "vga.h"
 
 static char current_prompt[32] = DEFAULT_PROMPT;

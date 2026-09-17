@@ -1,10 +1,13 @@
 #include "init.h"
 #include "drivers.h"
+#include "idt.h"
 #include "io.h"
 #include "kernel.h"
 #include "keyboard.h"
 #include "login.h"
+#include "pic.h"
 #include "shell.h"
+#include "timer.h"
 #include "vga.h"
 
 static void
@@ -20,6 +23,12 @@ print_init_step(const char *tag, unsigned char tag_color, const char *msg)
 void
 init(void)
 {
+	pic_remap(32, 40);
+	outb(0x21, 0xFC);
+	outb(0xA1, 0xFF);
+	idt_init();
+	init_pit(1000);
+	__asm__ volatile("sti");
 	vga_set_color(INIT_BG, VGA_FG_WHITE);
 	clear_screen();
 	hide_cursor();
