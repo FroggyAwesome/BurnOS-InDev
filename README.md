@@ -18,6 +18,7 @@ This project is licensed under the **BSD 3-Clause** license. See the [LICENSE](L
 * **iGPU VGA**
 * **BIOS LEGACY**
 ## In progress
-* **RAW FS**
-* **DOOM PORT (BOOM)**
+* **RAW FS**: *Read disk sectors*
+* **DOOM PORT (BOOM)**: *Game*
 * **FULL USA KEYBOARD**
+* **Pacman**: *Package manager (enable/disable buit-in packages)*
