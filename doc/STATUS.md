@@ -1,6 +1,6 @@
 # Project status
 * **Main Lang**: *GNU C99*
 * **Boot Lang**: *GNU Assembly (GAS)*
-* **Version**: *InDev v0.1*
+* **Version**: *v1.0.0-indev*
 * **Arch**: *i686*
 * **Firmware**: *BIOS*

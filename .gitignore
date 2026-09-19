@@ -3,3 +3,10 @@ bin/
 iso/boot/*.bin
 out/
 qemu.log
+BIOS
+.*
+!.clang-format
+!.gdbinit
+!.gitignore
+!.gitattributes
+!.vimrc

@@ -56,7 +56,7 @@ panic(const char *message)
 	print_color("-------------------------", panic_bg);
 	set_cursor(2, 2);
 	print_color("[ ", panic_bg);
-	print_color(OS_NAME, panic_bg);
+	print_color(NAME, panic_bg);
 	print_color(" - KERNEL PANIC ]", panic_bg);
 	set_cursor(2, 3);
 	print_color("-------------------------", panic_bg);
@@ -71,7 +71,7 @@ panic(const char *message)
 	print_color(ARCH, panic_bg);
 	set_cursor(2, 7);
 	print_color("OS Version: ", panic_bg);
-	print_color(OS_VERSION, panic_bg);
+	print_color(VERSION, panic_bg);
 	set_cursor(2, 24);
 	print_color("System halted. Please restart manually.", panic_footer);
 

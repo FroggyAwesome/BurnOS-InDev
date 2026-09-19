@@ -1,15 +1,27 @@
+# Project & Version Configuration
 TARGET = BurnOS
+VERSION = 1
+PATCHLEVEL = 0
+SUBLEVEL = 0
+EXTRAVERSION = -indev
+FULL_VERSION = $(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
+
+# Toolchain & Architecture Settings
 GDBADDR = tcp:localhost:1234
-MEM = 24M
+MEM = 4M
 FW = BIOS
 AS = as
 CC = gcc
 CF = clang-format
 ASFLAGS = --32
+
+# Paths & File Discovery
 INCLUDES = -Iconfig -Ikernel -Idrivers -Iarch/x86 -Iprograms -Imodules -Ifs
 CFILES = $(wildcard kernel/*.c) $(wildcard drivers/*.c) $(wildcard programs/*.c) $(wildcard modules/*.c) $(wildcard fs/*.c)
 HFILES = $(wildcard kernel/*.h) $(wildcard drivers/*.h) $(wildcard programs/*.h) $(wildcard modules/*.h) $(wildcard fs/*.h)
 CONFIGFILES = $(wildcard config/*.h)
+
+# Compiler Flags & Warnings
 NO_BUILTINS = -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -fno-common -fno-unwind-tables -fno-asynchronous-unwind-tables
 NO_SIMD = -mno-sse -mno-mmx -mno-sse2
 STD = -std=gnu99
@@ -24,21 +36,34 @@ CHECK_WARNINGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wundef -Wwrite-strin
                  -Wnull-dereference -Wold-style-definition -Wmissing-declarations
 CCHECKFLAGS = $(CHECK_BASE) $(CHECK_WARNINGS) $(CFILES)
 CFORMATFLAGS = -i $(CFILES) $(HFILES) $(CONFIGFILES)
+
+# QEMU Emulator Configuration
 EMU = qemu-system-i386
 EMULOGFILE = qemu.log
 EMULOG = -d int,cpu_reset -D $(EMULOGFILE)
 EMUCPU = -cpu pentium -smp 1
 EMUFLAGS = $(EMUCPU) -m $(MEM) -net none -nodefaults -machine pc -bios $(FW) -boot d -vga std
+
+# Object Files
 OBJS = objs/arch/x86/boot.o objs/arch/x86/isr.o $(patsubst %.c,objs/%.o,$(CFILES))
-.PHONY: all debug build format check iso run run-debug gdb clean-log clean-objs clean-bin clean-grub clean-os distclean
-all: debug
-bin/kernel.bin: $(OBJS)
+
+# PHONY Targets Declaration
+.PHONY: all debug build format check get-scripts iso run run-debug version clean-objs clean-bin clean-grub clean-os clean-scripts clean-log distclean
+
+# Main Build Targets
+all: check format  bin/kerneldbg.bin bin/kernelstd.bin
+bin/kerneldbg.bin: $(OBJS)
+	@mkdir -p bin/
+	ld -m elf_i386 -T arch/x86/linker.ld -o $@ $^
+bin/kernelstd.bin: $(OBJS)
 	@mkdir -p bin/
 	ld -m elf_i386 -T arch/x86/linker.ld -o $@ $^
 debug: FLAGS = $(CDEBUGFLAGS)
-debug: bin/kernel.bin
+debug: bin/kerneldbg.bin
 build: FLAGS = $(CFLAGS)
-build: check format distclean bin/kernel.bin
+build: check format distclean bin/kernelstd.bin
+
+# Compilation Pattern Rules
 objs/arch/x86/boot.o: arch/x86/boot.s
 	@mkdir -p objs/arch/x86
 	$(AS) $(ASFLAGS) $< -o $@
@@ -60,20 +85,44 @@ objs/modules/%.o: modules/%.c
 objs/fs/%.o: fs/%.c
 	@mkdir -p objs/fs
 	$(CC) $(FLAGS) -c $< -o $@
+
+# Development & Utility Tasks
 format:
 	$(CF) $(CFORMATFLAGS)
 check:
 	$(CC) $(CCHECKFLAGS)
+get-scripts:
+	@for f in scripts/*; do \
+		[ -f "$$f" ] && cp -v "$$f" . && chmod +x $$(basename "$$f"); \
+	done
+
+# ISO & Emulation Targets
 iso:
 	@mkdir -p out/
-	cp bin/kernel.bin iso/boot/kernel.bin
+	@if [ -f bin/kerneldbg.bin ] && [ -f bin/kernelstd.bin ]; then \
+		cp bin/kerneldbg.bin iso/boot/kerneldbg.bin; \
+		cp bin/kernelstd.bin iso/boot/kernelstd.bin; \
+	else \
+		echo "Error: No kernel binary found. Run 'make debug' or 'make build' first."; \
+		exit 1; \
+	fi
 	grub-mkrescue -o out/$(TARGET).iso iso
 run:
 	$(EMU) $(EMUFLAGS) -cdrom out/$(TARGET).iso
 run-debug:
 	$(EMU) $(EMUFLAGS) -gdb $(GDBADDR) -S $(EMULOG) -cdrom out/$(TARGET).iso
-clean-log:
-	rm -f $(EMULOGFILE)
+
+# Version Management
+version:
+	@echo "Updating project name to $(TARGET)..."
+	@sed -i "s/#define NAME \".*\"/#define NAME \"$(TARGET)\"/" config/os.h
+	@echo "Project name updated successfully."
+	@echo "Updating project version to v$(FULL_VERSION)..."
+	@sed -i "s/#define VERSION \".*\"/#define VERSION \"v$(FULL_VERSION)\"/" config/os.h
+	@sed -i "s/\* \*\*Version\*\*: \*.*/\* \*\*Version\*\*: *v$(FULL_VERSION)*/" doc/STATUS.md
+	@echo "Version updated successfully."
+
+# Cleanup Targets
 clean-objs:
 	rm -rf objs/
 clean-bin:
@@ -82,5 +131,17 @@ clean-grub:
 	rm -f iso/boot/*.bin
 clean-os:
 	rm -rf out/
-distclean: clean-log clean-objs clean-bin clean-grub clean-os
+clean-scripts:
+	@for f in scripts/*; do \
+		[ -e "$$f" ] || continue; \
+		base=$$(basename "$$f"); \
+		if [ -f "$$base" ]; then \
+			rm -v "$$base"; \
+		fi \
+	done
+clean-log:
+	rm -f $(EMULOGFILE)
+distclean: clean-log clean-objs clean-bin clean-grub clean-os clean-scripts
+
+# Automatic Dependencies
 -include $(OBJS:.o=.d)

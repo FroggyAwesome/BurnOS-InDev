@@ -6,7 +6,9 @@
 #include "kernel.h"
 #include "keyboard.h"
 #include "os.h"
+#include "rtc.h"
 #include "system.h"
+#include "timer.h"
 #include "vfs.h"
 #include "vga.h"
 
@@ -32,22 +34,6 @@ strprefix(const char *pre, const char *str)
 			return 0;
 	}
 	return 1;
-}
-
-static void
-help(void)
-{
-	print("Available commands:\n");
-	print("  help                - set prompt [n|c|f]\n");
-	print("  whoami              - games\n");
-	print("  hostname            - reboot\n");
-	print("  version             - poweroff\n");
-	print("  arch                - exit\n");
-	print("  dir                 - panic\n");
-	print("  cat [FILE]          - halt\n");
-	print("  echo [TEXT]         - set cursor [b|h|l]\n");
-	print("  cls                 -\n");
-	print("  set color [BG FG|d] -\n");
 }
 
 static int
@@ -138,10 +124,154 @@ execute_set(const char *args)
 }
 
 static void
+execute_time(void)
+{
+	int h, m, s;
+	read_rtc_time(&h, &m, &s);
+
+	char buf[9];
+	buf[0] = '0' + (h / 10);
+	buf[1] = '0' + (h % 10);
+	buf[2] = ':';
+	buf[3] = '0' + (m / 10);
+	buf[4] = '0' + (m % 10);
+	buf[5] = ':';
+	buf[6] = '0' + (s / 10);
+	buf[7] = '0' + (s % 10);
+	buf[8] = '\0';
+
+	print(buf);
+	print("\n");
+}
+
+static void
+execute_date(void)
+{
+	int d, m, y;
+	read_rtc_date(&d, &m, &y);
+
+	int yy = y % 100;
+	char buf[9];
+	buf[0] = '0' + (m / 10);
+	buf[1] = '0' + (m % 10);
+	buf[2] = '/';
+	buf[3] = '0' + (d / 10);
+	buf[4] = '0' + (d % 10);
+	buf[5] = '/';
+	buf[6] = '0' + (yy / 10);
+	buf[7] = '0' + (yy % 10);
+	buf[8] = '\0';
+
+	print(buf);
+	print("\n");
+}
+
+static void
+execute_day(void)
+{
+	execute_date();
+	execute_time();
+}
+
+static void
+execute_sleep(const char *args)
+{
+	int seconds = parse_int(args);
+	if (seconds <= 0) {
+		print("Error: Invalid duration.\n");
+		return;
+	}
+	sleep((unsigned int)seconds);
+}
+
+static void
+execute_uptime(void)
+{
+	unsigned int secs = get_ticks() / 1000;
+	unsigned int m = secs / 60;
+	unsigned int s = secs % 60;
+
+	char buf[16];
+	int i = 0;
+
+	buf[i++] = '0' + (m / 10);
+	buf[i++] = '0' + (m % 10);
+	buf[i++] = 'm';
+	buf[i++] = ' ';
+	buf[i++] = '0' + (s / 10);
+	buf[i++] = '0' + (s % 10);
+	buf[i++] = 's';
+	buf[i++] = '\n';
+	buf[i] = '\0';
+
+	print("Uptime: ");
+	print(buf);
+}
+
+static void
+execute_colors(void)
+{
+	print("VGA Color Palette:\n");
+	print("  0: Black        8: Dark Grey\n");
+	print("  1: Blue         9: Light Blue\n");
+	print("  2: Green       10: Light Green\n");
+	print("  3: Cyan        11: Light Cyan\n");
+	print("  4: Red         12: Light Red\n");
+	print("  5: Magenta     13: Light Magenta\n");
+	print("  6: Brown       14: Yellow\n");
+	print("  7: Light Grey  15: White\n");
+}
+
+static void
+execute_cpu(void)
+{
+	unsigned int ebx, edx, ecx;
+	__asm__ volatile(
+			"cpuid"
+			: "=b"(ebx), "=d"(edx), "=c"(ecx)
+			: "a"(0));
+
+	char vendor[13];
+	*(unsigned int *)&vendor[0] = ebx;
+	*(unsigned int *)&vendor[4] = edx;
+	*(unsigned int *)&vendor[8] = ecx;
+	vendor[12] = '\0';
+
+	print("CPU Vendor: ");
+	print(vendor);
+	print("\n");
+}
+
+static void
+execute_gpu(void)
+{
+	print("GPU / Display Info:\n");
+	print("  Controller: VGA Text Mode\n");
+	print("  Resolution: 80x25 text cells\n");
+	print("  Memory:     0xB8000\n");
+}
+
+static void
+execute_help(void)
+{
+	print("Available commands:\n");
+	print("  help                - set prompt [n|c|f] - day\n");
+	print("  whoami              - games              - sleep [X]\n");
+	print("  hostname            - reboot             - uptime\n");
+	print("  version             - poweroff           - colors\n");
+	print("  arch                - exit               - cpu\n");
+	print("  dir                 - panic [MSG]        - gpu\n");
+	print("  cat [FILE]          - halt               -\n");
+	print("  echo [TEXT]         - set cursor [b|h|l] -\n");
+	print("  cls                 - time               -\n");
+	print("  set color [BG FG|d] - date               -\n");
+}
+
+static void
 execute_command(const char *buffer)
 {
 	if (streq(buffer, "help") == 0) {
-		help();
+		execute_help();
 	} else if (streq(buffer, "dir") == 0) {
 		vfs_dir();
 	} else if (strprefix("cat ", buffer)) {
@@ -153,7 +283,7 @@ execute_command(const char *buffer)
 	} else if (streq(buffer, "cls") == 0) {
 		clear_screen();
 	} else if (streq(buffer, "version") == 0) {
-		print(OS_VERSION "\n");
+		print(VERSION "\n");
 	} else if (streq(buffer, "arch") == 0) {
 		print(ARCH "\n");
 	} else if (strprefix("echo ", buffer)) {
@@ -164,7 +294,7 @@ execute_command(const char *buffer)
 	} else if (streq(buffer, "hostname") == 0) {
 		print(HOST "\n");
 	} else if (streq(buffer, "panic") == 0) {
-		panic("Forced");
+		panic("Manually executed by the user.");
 	} else if (strprefix("panic ", buffer)) {
 		panic(buffer + 6);
 	} else if (streq(buffer, "halt") == 0) {
@@ -173,6 +303,22 @@ execute_command(const char *buffer)
 		games_main();
 	} else if (strprefix("set ", buffer)) {
 		execute_set(buffer + 4);
+	} else if (streq(buffer, "time") == 0) {
+		execute_time();
+	} else if (streq(buffer, "date") == 0) {
+		execute_date();
+	} else if (streq(buffer, "day") == 0) {
+		execute_day();
+	} else if (strprefix("sleep ", buffer)) {
+		execute_sleep(buffer + 6);
+	} else if (streq(buffer, "uptime") == 0) {
+		execute_uptime();
+	} else if (streq(buffer, "colors") == 0) {
+		execute_colors();
+	} else if (streq(buffer, "cpu") == 0) {
+		execute_cpu();
+	} else if (streq(buffer, "gpu") == 0) {
+		execute_gpu();
 	} else {
 		print("Command not found. Type 'help' for available commands.\n");
 	}

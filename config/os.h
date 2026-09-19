@@ -1,8 +1,8 @@
 #ifndef OS_H
 #define OS_H
 
-#define OS_NAME "BurnOS"
-#define OS_VERSION "InDev v0.2"
+#define NAME "BurnOS"
+#define VERSION "v1.0.0-indev"
 #define ARCH "i686"
 #define HOST "burnos"
 

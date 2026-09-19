@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "WARNING: You need to run this program with superuser privileges."
+dd if=out/BurnOS.iso of=/dev/sdc bs=4M status=progress oflag=sync
+sync
