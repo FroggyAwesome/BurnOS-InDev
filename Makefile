@@ -51,7 +51,7 @@ OBJS = objs/arch/x86/boot.o objs/arch/x86/isr.o $(patsubst %.c,objs/%.o,$(CFILES
 .PHONY: all debug build format check get-scripts iso run run-debug version clean-objs clean-bin clean-grub clean-os clean-scripts clean-log distclean
 
 # Main Build Targets
-all: check format  bin/kerneldbg.bin bin/kernelstd.bin
+all: check format bin/kerneldbg.bin bin/kernelstd.bin
 bin/kerneldbg.bin: $(OBJS)
 	@mkdir -p bin/
 	ld -m elf_i386 -T arch/x86/linker.ld -o $@ $^
